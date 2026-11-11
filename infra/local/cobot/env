@@ -1,0 +1,24 @@
+# ===================================================
+# Credenciais do Servidor RabbitMQ (Docker)
+# ===================================================
+RABBITMQ_DEFAULT_USER=admin
+RABBITMQ_DEFAULT_PASS=admin123
+
+# ===================================================
+# Configurações de Conexão dos Scripts Python
+# ===================================================
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=admin
+RABBITMQ_PASS=admin123
+
+# ===================================================
+# Autenticação e Segurança (API cobot-service)
+# ===================================================
+JWT_SECRET=chave_secreta_industria_40_super_segura
+
+# ===================================================
+# Endereço IP do Robô Físico UR3e na Bancada
+# (Use 127.0.0.1 em modo simulado ou o IP real da bancada)
+# ===================================================
+UR_ROBOT_IP=192.168.1.100
