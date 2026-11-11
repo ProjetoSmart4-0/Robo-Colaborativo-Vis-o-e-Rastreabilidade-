@@ -22,7 +22,9 @@ logger = logging.getLogger("rfid-inspection")
 
 # Configurações de Conexão e API
 COBOT_SERVICE_URL = os.getenv("COBOT_SERVICE_URL", "http://localhost:8080/api/v1/cobot/inspection")
-TEST_JWT_TOKEN = os.getenv("TEST_JWT_TOKEN", "Bearer SEU_TOKEN_JWT_ENGINEER_AQUI")
+TEST_JWT_TOKEN = os.getenv("TEST_JWT_TOKEN", "SEU_TOKEN_JWT_ENGINEER_AQUI")
+# O Render gratuito hiberna e a primeira chamada pode levar ~50 s; por isso o timeout alto.
+REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", 60))
 ANTENNA_ID = os.getenv("RFID_ANTENNA_ID", "ANT-MONTAGEM-C-Q1")
 
 # Padrão Regex para TAGs RFID da célula SMART 4.0 (ou UID hexadecimal de 8/16/24 dígitos)
@@ -129,15 +131,16 @@ def notify_cobot_service(
         "details": details
     }
     headers = {
-        "Authorization": TEST_JWT_TOKEN,
+        # Aceita o token com ou sem o prefixo "Bearer "
+        "Authorization": TEST_JWT_TOKEN if TEST_JWT_TOKEN.startswith("Bearer ") else f"Bearer {TEST_JWT_TOKEN}",
         "Content-Type": "application/json"
     }
 
     try:
         logger.info(f"Enviando validação RFID ({status}) para {COBOT_SERVICE_URL}...")
-        response = requests.post(COBOT_SERVICE_URL, json=payload, headers=headers, timeout=5)
+        response = requests.post(COBOT_SERVICE_URL, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         logger.info(f"Resposta do cobot-service ({response.status_code}): {response.text}")
-        return response.json()
+        return response.json() if response.ok else None
     except Exception as e:
         logger.error(f"Erro ao notificar cobot-service: {e}")
         return None
