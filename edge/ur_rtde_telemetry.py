@@ -6,6 +6,7 @@ Lê a telemetria angular das 6 juntas e o estado da garra via socket TCP non-blo
 na porta industrial 30004 (RTDE a 125 Hz), respeitando o isolamento OT/IT na rede local.
 """
 
+import os
 import socket
 import time
 import json
@@ -16,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("ur-rtde-telemetry")
 
 # Configurações do Robô UR3e e Garra SCHUNK EGH
-ROBOT_IP = "192.168.1.100"   # Endereço IP do robô na rede física OT
+ROBOT_IP = os.getenv("UR_ROBOT_IP", "192.168.1.100")   # Endereço IP do robô na rede física OT
 RTDE_PORT = 30004           # Porta RTDE (125 Hz)
 SAMPLING_RATE_HZ = 10       # Taxa de atualização para a nuvem / Gêmeo Digital
 
