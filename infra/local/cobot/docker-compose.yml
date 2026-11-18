@@ -1,19 +1,19 @@
 version: '3.8'
 
-networks: 
+networks:
   industria40-net:
     driver: bridge
 
-services: 
+services:
   rabbitmq:
-    image: rabbitmq:3-management 
-    container\_name: rabbitmq\_cobot 
+    image: rabbitmq:3-management
+    container_name: rabbitmq_cobot
     ports:
-      - "5672:5672" 
+      - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ\_DEFAULT\_USER: "guest"
-      RABBITMQ\_DEFAULT\_PASS: "guest" 
-    networks: 
-      - industria40-net 
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+    networks:
+      - industria40-net
     restart: always
