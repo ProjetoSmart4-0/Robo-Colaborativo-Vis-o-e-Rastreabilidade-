@@ -1,0 +1,3 @@
+requests>=2.31.0
+pika>=1.3.0
+ur_rtde>=1.5.0
