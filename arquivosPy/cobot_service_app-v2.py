@@ -4,6 +4,7 @@ Projeto Integrador SMART 4.0 - Indústria 4.0 (Grupo 2: Cobot, RFID & QA)
 Versão 2: Substituição da identificação por QR Code por TAG RFID / Antena Industrial.
 """
 
+
 import os
 import json
 import logging
@@ -13,6 +14,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 import pika
 import jwt
+import storage
 
 # Configuração de Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -148,11 +150,21 @@ def trigger_cobot_routine(
 
 @app.post("/api/v1/cobot/inspection")
 def record_inspection_result(
+    
     request: InspectionResultRequest,
     user=Depends(verify_jwt_and_role(required_role="ENGINEER"))
 ):
     """Recebe resultado da validação da TAG RFID e comanda o próximo passo do robô."""
     logger.info(f"Inspeção RFID registrada para a peça {request.piece_rfid_tag}: {request.inspection_status}")
+
+    # Grava no banco de dados SQLite local (ou Neon Postgres)
+    storage.salvar_inspecao({
+        "correlation_id": request.piece_rfid_tag + "-" + str(request.order_id),
+        "qrCode": request.piece_rfid_tag,
+        "resultado": request.inspection_status,
+        "pontuacaoQualidade": 100.0 if request.inspection_status == "INSPECTED_OK" else 0.0,
+        "fonteLeitura": request.antenna_id
+    })
     
     # Se for aprovado, enfileira próximo movimento do robô para montagem
     if request.inspection_status == "INSPECTED_OK":
@@ -177,6 +189,11 @@ def record_inspection_result(
         "piece_rfid_tag": request.piece_rfid_tag,
         "action_taken": "ASSEMBLY" if request.inspection_status == "INSPECTED_OK" else "SCRAP_ROUTINE_8"
     }
+
+@app.get("/api/v1/cobot/inspections")
+def get_inspections_history(limit: int = 10):
+    """Retorna o histórico de inspeções gravadas no banco de dados."""
+    return storage.listar_inspecoes(limit=limit)
 
 if __name__ == "__main__":
     import uvicorn
