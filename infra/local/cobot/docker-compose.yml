@@ -1,19 +1,29 @@
-version: '3.8'
+name: cobot-local
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: industria40-rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - industria40-net
+    restart: unless-stopped
 
 networks:
   industria40-net:
     driver: bridge
 
-services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq_cobot
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: "guest"
-      RABBITMQ_DEFAULT_PASS: "guest"
-    networks:
-      - industria40-net
-    restart: always
+volumes:
+  rabbitmq_data:

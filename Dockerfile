@@ -23,3 +23,8 @@ EXPOSE 8080
 
 # Inicia a API FastAPI usando a variável de porta dinâmica do Render
 CMD ["sh", "-c", "uvicorn cobot_service_app:app --app-dir services/cobot-services --host 0.0.0.0 --port ${PORT:-8080}"]
+
+
+
+
+
