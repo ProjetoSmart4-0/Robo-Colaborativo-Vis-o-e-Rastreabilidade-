@@ -1,0 +1,6 @@
+2026-11-25 00:00:28 [INFO] Agente RFID iniciado (modo=TCP, ordens_validas=['OP-2026-001', 'OP-2026-002'])
+2026-11-25 00:00:59 [INFO] Tentando reenviar 25 evento(s) do buffer...
+2026-11-25 00:00:59 [WARNING] Falha de rede ao enviar e4cdb7eb-81d8-4db6-ab90-792b73e6669c: HTTPConnectionPool(host='127.0.0.1', port=8000): Max retries exceeded with url: /api/cobot/inspections (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=8000): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-11-25 00:00:59 [WARNING] Buffer ainda possui 25 evento(s). Aguardando 2s para nova tentativa...
+2026-11-25 00:01:01 [WARNING] Evento 1121548b-2049-4fa9-98f3-961bbfe1db41 salvo no buffer (26 na fila).
+2026-11-25 00:01:01 [INFO] Evento emitido | tag=XYZ123 | resultado=INSPECTED_NOK | score=40 | latencia=2503.3ms | id=1121548b-2049-4fa9-98f3-961bbfe1db41
