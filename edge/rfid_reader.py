@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
 
+
 # 1. Estrutura de dados da Leitura
 @dataclass
 class Leitura:
@@ -17,9 +18,10 @@ class Leitura:
 class LeitorRFID:
     def ler(self, timeout_s: float = 1.0) -> List[Leitura]:
         raise NotImplementedError
-    
+
     def fechar(self):
         pass
+
 
 # 3. Driver Simulado
 class LeitorSimulado(LeitorRFID):
@@ -38,7 +40,7 @@ class LeitorSimulado(LeitorRFID):
             "ERR-INVALID-TAG",
             "INVALID_999"
         ]
-        self.ultima_troca = 0.0
+        self.ultima_troca = time.time()
         self.intervalo_troca = random.uniform(5.0, 10.0)
         self.tag_atual = self._sortear_tag()
 
@@ -70,6 +72,7 @@ class LeitorSimulado(LeitorRFID):
             leituras.append(Leitura(tag=self.tag_atual, rssi=rssi, ts=ts))
 
         return leituras
+
 
 # 4. Driver TCP Conectado
 class LeitorTCP(LeitorRFID):
@@ -103,7 +106,7 @@ class LeitorTCP(LeitorRFID):
 
         leituras = []
         tempo_inicio = time.time()
-        
+
         while (time.time() - tempo_inicio) < timeout_s:
             try:
                 self.sock.settimeout(max(0.1, timeout_s - (time.time() - tempo_inicio)))
@@ -142,6 +145,8 @@ class LeitorTCP(LeitorRFID):
             except Exception:
                 pass
             self.sock = None
+        self.buffer = ""
+
 
 # 5. Função Factory para escolha do driver
 def criar_leitor() -> LeitorRFID:
