@@ -1,0 +1,8 @@
+.git
+.env
+docs
+infra
+edge
+tests
+*.md
+__pycache__
