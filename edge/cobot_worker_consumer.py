@@ -19,14 +19,21 @@ RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", 5672))
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
 RABBITMQ_PASS = os.getenv("RABBITMQ_PASS", "guest")
-QUEUE_NAME = "cobot_pick_place_queue"
+QUEUE_NAME = os.getenv("QUEUE_TASKS", "cobot_tasks")
 RABBITMQ_URL = os.getenv("RABBITMQ_URL")  # amqps://... do CloudAMQP; tem prioridade sobre host/porta
 
 UR_ROBOT_IP = os.getenv("UR_ROBOT_IP", "192.168.1.100")
 DASHBOARD_PORT = 29999  # Porta Dashboard Server do PolyScope UR
 
+DRY_RUN = os.getenv("DRY_RUN", "true").lower() != "false"
+ROBOT_COMMANDS_ENABLED = os.getenv("ROBOT_COMMANDS_ENABLED", "false").lower() == "true"
+
 def trigger_robot_routine(routine_id: int, piece_rfid_tag: str):
     """Aciona a rotina no controlador do robô UR associando à TAG RFID da peça."""
+    if DRY_RUN or not ROBOT_COMMANDS_ENABLED:
+        logger.info(f"[SIMULADO] executaria a rotina {routine_id} para a tag {piece_rfid_tag}")
+        return
+
     logger.info(f"Disparando Rotina {routine_id} no UR3e para o SmartBlock (RFID: '{piece_rfid_tag}')...")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
