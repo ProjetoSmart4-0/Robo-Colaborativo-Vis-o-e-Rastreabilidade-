@@ -26,6 +26,9 @@ TEST_JWT_TOKEN = os.getenv("TEST_JWT_TOKEN", "SEU_TOKEN_JWT_ENGINEER_AQUI")
 # O Render gratuito hiberna e a primeira chamada pode levar ~50 s; por isso o timeout alto.
 REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", 60))
 ANTENNA_ID = os.getenv("RFID_ANTENNA_ID", "ANT-MONTAGEM-C-Q1")
+# Em bancada real defina RFID_ALLOW_SIMULATION=0: leitor offline NÃO pode virar uma TAG "válida" de mentira.
+ALLOW_SIMULATION = os.getenv("RFID_ALLOW_SIMULATION", "1") == "1"
+DEFAULT_ORDER_ID = os.getenv("ORDER_ID", "OP-2026-001")
 
 # Padrão Regex para TAGs RFID da célula SMART 4.0 (ou UID hexadecimal de 8/16/24 dígitos)
 # Exemplos aceitos: RFID-SMART40-2026-001-A, TAG-SB-2026-001, ou UID HEX (ex: E0040150A1B2C3D4)
@@ -120,7 +123,8 @@ def notify_cobot_service(
     rfid_tag: str,
     order_id: str,
     status: str,
-    details: Dict[str, Any]
+    details: Dict[str, Any],
+    correlation_id: Optional[str] = None
 ) -> Optional[dict]:
     """Envia o resultado da inspeção RFID para a API do Cobot (pieces_traceability)."""
     payload = {
@@ -130,6 +134,8 @@ def notify_cobot_service(
         "antenna_id": ANTENNA_ID,
         "details": details
     }
+    if correlation_id:
+        payload["correlation_id"] = correlation_id
     headers = {
         # Aceita o token com ou sem o prefixo "Bearer "
         "Authorization": TEST_JWT_TOKEN if TEST_JWT_TOKEN.startswith("Bearer ") else f"Bearer {TEST_JWT_TOKEN}",
@@ -145,9 +151,10 @@ def notify_cobot_service(
         logger.error(f"Erro ao notificar cobot-service: {e}")
         return None
 
-def process_rfid_pipeline(simulated_tag: Optional[str] = None):
+def process_rfid_pipeline(simulated_tag: Optional[str] = None,
+                          order_id: str = DEFAULT_ORDER_ID,
+                          correlation_id: Optional[str] = None):
     """Pipeline executado na Bancada de Montagem quando o robô posiciona o SmartBlock na antena."""
-    order_id = "OP-2026-001"
     reader = RFIDReaderClient()
 
     if simulated_tag:
@@ -158,13 +165,14 @@ def process_rfid_pipeline(simulated_tag: Optional[str] = None):
             "block_data": {"product": "SmartBlock", "stage": "Bancada_Montagem"}
         }
     else:
-        tag_data = reader.read_tag()
+        tag_data = reader.read_tag(simulate_if_offline=ALLOW_SIMULATION)
 
     status, details = validate_rfid_quality_and_order(tag_data, expected_order_id=order_id)
     tag_uid = tag_data.get("tag_uid", "UNKNOWN_TAG") if tag_data else "NO_TAG"
 
     logger.info(f"Resultado Final da Validação RFID: {status} | Detalhes: {details['reason']}")
-    notify_cobot_service(rfid_tag=tag_uid, order_id=order_id, status=status, details=details)
+    notify_cobot_service(rfid_tag=tag_uid, order_id=order_id, status=status, details=details,
+                         correlation_id=correlation_id)
 
 if __name__ == "__main__":
     print("\n" + "="*65)

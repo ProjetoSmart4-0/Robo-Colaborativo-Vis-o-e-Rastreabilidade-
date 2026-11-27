@@ -1,0 +1,475 @@
+[
+  {
+    "id": "n2_tab",
+    "type": "tab",
+    "label": "SMART40 N2 - Cobot & Garra SCHUNK EGH80 (MQTT)",
+    "disabled": false,
+    "info": "Integracao completa: A) Chegada do pallet (CLP), B) Resultado da inspecao, C) Telemetria UR3e, D) Servidor da Garra SCHUNK EGH80 (recebe comandos da API e controla o hardware/simulador)."
+  },
+  {
+    "id": "n2_tls",
+    "type": "tls-config",
+    "name": "TLS CloudAMQP (CAs do sistema)",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "",
+    "keyname": "",
+    "caname": "",
+    "servername": "",
+    "verifyservercert": true,
+    "alpnprotocol": ""
+  },
+  {
+    "id": "n2_broker_cloudamqp",
+    "type": "mqtt-broker",
+    "name": "CloudAMQP (RabbitMQ MQTT)",
+    "broker": "jackal.rmq.cloudamqp.com",
+    "port": "8883",
+    "tls": "n2_tls",
+    "clientid": "nodered-n2-notebook",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": "",
+    "credentials": {
+      "user": "mzluipds:mzluipds",
+      "password": ""
+    }
+  },
+  {
+    "id": "n2_c1",
+    "type": "comment",
+    "z": "n2_tab",
+    "name": "A) CLP -> Node-RED -> CloudAMQP (smart40/n2/montagem/pallet)",
+    "info": "1) Preencha host/usuário/senha nos nós de broker (duplo clique > lápis).\n2) Troque o tópico do nó 'mqtt in' do CLP pelo tópico real que o CLP publica.\n3) Use os injects de teste para simular sem o CLP.",
+    "x": 300,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "n2_in_clp",
+    "type": "mqtt in",
+    "z": "n2_tab",
+    "name": "Presença do pallet (CLP)",
+    "topic": "PREENCHER/TOPICO/DO/CLP",
+    "qos": "1",
+    "datatype": "auto-detect",
+    "broker": "n2_broker_cloudamqp",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 170,
+    "y": 100,
+    "wires": [
+      [
+        "n2_fn_pallet"
+      ]
+    ]
+  },
+  {
+    "id": "n2_inj_ok",
+    "type": "inject",
+    "z": "n2_tab",
+    "name": "Simular chegada (tag OK)",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "teste/inject",
+    "payload": "{\"presence\": true, \"simulate\": true, \"tag_uid\": \"RFID-SMART40-2026-001-A\"}",
+    "payloadType": "json",
+    "x": 190,
+    "y": 160,
+    "wires": [
+      [
+        "n2_fn_pallet"
+      ]
+    ]
+  },
+  {
+    "id": "n2_inj_nok",
+    "type": "inject",
+    "z": "n2_tab",
+    "name": "Simular chegada (tag NOK)",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "teste/inject",
+    "payload": "{\"presence\": true, \"simulate\": true, \"tag_uid\": \"RFID-SMART40-2025-999-Z\"}",
+    "payloadType": "json",
+    "x": 190,
+    "y": 210,
+    "wires": [
+      [
+        "n2_fn_pallet"
+      ]
+    ]
+  },
+  {
+    "id": "n2_inj_reader",
+    "type": "inject",
+    "z": "n2_tab",
+    "name": "Simular chegada (leitor lê a tag)",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "teste/inject",
+    "payload": "{\"presence\": true, \"simulate\": true}",
+    "payloadType": "json",
+    "x": 190,
+    "y": 260,
+    "wires": [
+      [
+        "n2_fn_pallet"
+      ]
+    ]
+  },
+  {
+    "id": "n2_inj_clp1",
+    "type": "inject",
+    "z": "n2_tab",
+    "name": "Simular CLP: sensor = 1",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "teste/inject",
+    "payload": "1",
+    "payloadType": "str",
+    "x": 190,
+    "y": 310,
+    "wires": [
+      [
+        "n2_fn_pallet"
+      ]
+    ]
+  },
+  {
+    "id": "n2_inj_clp0",
+    "type": "inject",
+    "z": "n2_tab",
+    "name": "Simular CLP: sensor = 0",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "teste/inject",
+    "payload": "0",
+    "payloadType": "str",
+    "x": 190,
+    "y": 360,
+    "wires": [
+      [
+        "n2_fn_pallet"
+      ]
+    ]
+  },
+  {
+    "id": "n2_fn_pallet",
+    "type": "function",
+    "z": "n2_tab",
+    "name": "Normalizar sinal -> PALLET_ARRIVED",
+    "func": "// Normaliza o sinal do CLP e dispara SOMENTE na borda de subida (pallet chegou).\nconst CFG = {\n    ORDER_ID: \"OP-2026-001\",\n    STATION: \"MONTAGEM\",\n    DEBOUNCE_MS: 5000,\n    TOPIC_OUT: \"smart40/n2/montagem/pallet\"\n};\n\nfunction toBool(v) {\n    if (typeof v === \"boolean\") return v;\n    if (typeof v === \"number\") return v !== 0;\n    if (typeof v === \"string\") {\n        const s = v.trim().toLowerCase();\n        if ([\"1\", \"true\", \"on\", \"high\"].includes(s)) return true;\n        if ([\"0\", \"false\", \"off\", \"low\"].includes(s)) return false;\n    }\n    return null;\n}\n\nlet p = msg.payload;\nif (Buffer.isBuffer(p)) p = p.toString();\nif (typeof p === \"string\") {\n    const s = p.trim();\n    try { p = JSON.parse(s); } catch (e) { p = s; }\n}\n\nlet presence = null, tag = null, simulate = false, order = null;\nif (p !== null && typeof p === \"object\") {\n    const v = (p.presence !== undefined) ? p.presence\n            : (p.pallet !== undefined) ? p.pallet\n            : (p.value !== undefined) ? p.value\n            : (p.state !== undefined) ? p.state\n            : p.sensor;\n    presence = toBool(v);\n    tag = p.tag_uid || null;\n    order = p.order_id || null;\n    simulate = p.simulate === true;\n} else {\n    presence = toBool(p);\n}\n\nif (presence === null) {\n    node.warn(\"Sinal do CLP não reconhecido: \" + JSON.stringify(msg.payload));\n    return null;\n}\n\nconst now = Date.now();\nconst prev = flow.get(\"pallet_presence\") === true;\nflow.set(\"pallet_presence\", presence);\n\nif (!presence) {\n    node.status({ fill: \"grey\", shape: \"ring\", text: \"pallet ausente\" });\n    return null;\n}\nif (prev && !simulate) {\n    node.status({ fill: \"grey\", shape: \"dot\", text: \"presença mantida (sem nova borda)\" });\n    return null;\n}\nconst last = flow.get(\"pallet_last_ts\") || 0;\nif (!simulate && (now - last) < CFG.DEBOUNCE_MS) {\n    node.warn(\"Debounce: nova chegada em \" + (now - last) + \" ms ignorada\");\n    return null;\n}\nflow.set(\"pallet_last_ts\", now);\n\nconst correlationId = \"PALLET-\" + now.toString(36) + \"-\" + Math.random().toString(36).slice(2, 8);\nconst out = {\n    event: \"PALLET_ARRIVED\",\n    station: CFG.STATION,\n    order_id: order || CFG.ORDER_ID,\n    correlation_id: correlationId,\n    ts: new Date(now).toISOString(),\n    source: msg.topic || \"nodered\"\n};\nif (tag) out.tag_uid = tag;\n\nnode.status({ fill: \"green\", shape: \"dot\", text: \"PALLET_ARRIVED \" + correlationId });\nreturn { topic: CFG.TOPIC_OUT, payload: out, qos: 1, retain: false };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 470,
+    "y": 200,
+    "wires": [
+      [
+        "n2_out_pallet",
+        "n2_dbg_pallet"
+      ]
+    ]
+  },
+  {
+    "id": "n2_out_pallet",
+    "type": "mqtt out",
+    "z": "n2_tab",
+    "name": "-> smart40/n2/montagem/pallet",
+    "topic": "",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "n2_broker_cloudamqp",
+    "x": 790,
+    "y": 170,
+    "wires": []
+  },
+  {
+    "id": "n2_dbg_pallet",
+    "type": "debug",
+    "z": "n2_tab",
+    "name": "Evento publicado",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 770,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "n2_c2",
+    "type": "comment",
+    "z": "n2_tab",
+    "name": "B) Resultado da inspeção (publicado pela API) <- smart40/n2/cobot/inspection",
+    "info": "A API publica no amq.topic com routing key smart40.n2.cobot.inspection; o plugin MQTT entrega como tópico com barras.\nDaqui você pode ligar dashboard, MES, alarme de NOK etc.",
+    "x": 330,
+    "y": 430,
+    "wires": []
+  },
+  {
+    "id": "n2_in_insp",
+    "type": "mqtt in",
+    "z": "n2_tab",
+    "name": "Resultado da inspeção",
+    "topic": "smart40/n2/cobot/inspection",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "n2_broker_cloudamqp",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 170,
+    "y": 490,
+    "wires": [
+      [
+        "n2_fn_insp"
+      ]
+    ]
+  },
+  {
+    "id": "n2_fn_insp",
+    "type": "function",
+    "z": "n2_tab",
+    "name": "Resumir inspeção",
+    "func": "// Resume o resultado da inspeção publicado pela API do cobot (via amq.topic -> MQTT).\nconst e = msg.payload;\nif (!e || typeof e !== \"object\") { return null; }\nconst ok = e.resultado === \"INSPECTED_OK\";\nnode.status({\n    fill: ok ? \"green\" : \"red\",\n    shape: \"dot\",\n    text: (e.qrCode || \"?\") + \" \" + (ok ? \"OK\" : \"NOK\") + \" -> \" + (e.acao || \"?\")\n});\nconst n = (flow.get(\"inspections_total\") || 0) + 1;\nconst nok = (flow.get(\"inspections_nok\") || 0) + (ok ? 0 : 1);\nflow.set(\"inspections_total\", n);\nflow.set(\"inspections_nok\", nok);\nmsg.summary = { total: n, nok: nok, last: e };\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 490,
+    "wires": [
+      [
+        "n2_dbg_insp"
+      ]
+    ]
+  },
+  {
+    "id": "n2_dbg_insp",
+    "type": "debug",
+    "z": "n2_tab",
+    "name": "Inspeção",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "summary",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 650,
+    "y": 490,
+    "wires": []
+  },
+  {
+    "id": "n2_c3",
+    "type": "comment",
+    "z": "n2_tab",
+    "name": "C) Telemetria do UR3e <- smart40/n2/cobot/status (1 Hz)",
+    "info": "Publicada por edge/telemetry_mqtt_publisher.py. Enquanto o RTDE não estiver ligado, o campo source = SIMULATED.",
+    "x": 270,
+    "y": 560,
+    "wires": []
+  },
+  {
+    "id": "n2_in_tel",
+    "type": "mqtt in",
+    "z": "n2_tab",
+    "name": "Telemetria do cobot",
+    "topic": "smart40/n2/cobot/status",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "n2_broker_cloudamqp",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 170,
+    "y": 610,
+    "wires": [
+      [
+        "n2_dbg_tel"
+      ]
+    ]
+  },
+  {
+    "id": "n2_dbg_tel",
+    "type": "debug",
+    "z": "n2_tab",
+    "name": "Telemetria",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 430,
+    "y": 610,
+    "wires": []
+  },
+  {
+    "id": "n2_c4",
+    "type": "comment",
+    "z": "n2_tab",
+    "name": "D) Servidor da Garra SCHUNK EGH80 no Node-RED <- smart40/n2/cobot/gripper",
+    "info": "Recebe os comandos do Gêmeo Digital disparados pela API no Render (EGH Grip, EGH Release, EGH Position) via CloudAMQP MQTT.\nConverte para o driver da garra no Node-RED (IO-Link / FEN20 / Modbus) e publica confirmação de estado.",
+    "x": 350,
+    "y": 690,
+    "wires": []
+  },
+  {
+    "id": "n2_in_gripper",
+    "type": "mqtt in",
+    "z": "n2_tab",
+    "name": "Comandos da Garra (API -> Node-RED)",
+    "topic": "smart40/n2/cobot/gripper",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "n2_broker_cloudamqp",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 210,
+    "y": 750,
+    "wires": [
+      [
+        "n2_fn_gripper"
+      ]
+    ]
+  },
+  {
+    "id": "n2_fn_gripper",
+    "type": "function",
+    "z": "n2_tab",
+    "name": "Controlador Garra SCHUNK EGH80",
+    "func": "// Processa comandos vindos de POST /api/v1/cobot/gripper/command (via CloudAMQP amq.topic -> smart40/n2/cobot/gripper)\nconst cmd = msg.payload || {};\nconst commandName = cmd.gripper_command || cmd.command || \"EGH Grip\";\nconst posMm = (cmd.position_mm !== undefined) ? Number(cmd.position_mm) : 18.5;\nconst forcePct = (cmd.force_percentage !== undefined) ? Number(cmd.force_percentage) : 50;\nconst ledColor = cmd.led_color || (commandName === \"EGH Release\" ? \"BLUE\" : \"GREEN\");\n\nlet state = \"HOLDING\";\nif (commandName === \"EGH Release\" || posMm >= 75) state = \"OPEN\";\nelse if (posMm <= 4) state = \"CLOSED\";\n\nflow.set(\"gripper_state\", {\n    model: \"SCHUNK EGH80\",\n    state: state,\n    position_mm: posMm,\n    opening_percentage: Math.round((posMm / 80.0) * 1000) / 10,\n    force_percentage: forcePct,\n    led_color: ledColor,\n    last_command: commandName,\n    updated_at: new Date().toISOString()\n});\n\nnode.status({\n    fill: ledColor === \"RED\" ? \"red\" : (ledColor === \"BLUE\" ? \"blue\" : (ledColor === \"YELLOW\" ? \"yellow\" : \"green\")),\n    shape: \"dot\",\n    text: `${commandName} -> ${state} (${posMm}mm, ${forcePct}%)`\n});\n\n// Saída pronta para ligar ao nó IO-Link / Modbus / HTTP da garra física no Node-RED\nmsg.gripper_hw = {\n    command: commandName,\n    target_position_mm: posMm,\n    force_percentage: forcePct,\n    led_color: ledColor,\n    state: state\n};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 520,
+    "y": 750,
+    "wires": [
+      [
+        "n2_dbg_gripper"
+      ]
+    ]
+  },
+  {
+    "id": "n2_dbg_gripper",
+    "type": "debug",
+    "z": "n2_tab",
+    "name": "Saída p/ Garra SCHUNK",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "gripper_hw",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 790,
+    "y": 750,
+    "wires": []
+  }
+]
