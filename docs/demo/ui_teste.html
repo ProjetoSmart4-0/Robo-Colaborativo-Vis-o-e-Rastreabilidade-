@@ -209,3 +209,78 @@
   </script>
 </body>
 </html>
+
+  <title>IHM Teste - Eventos Cobot SSE</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
+    .card { border: 1px solid #ccc; padding: 12px; margin-bottom: 10px; border-radius: 6px; background: white; }
+    .card-ok { border-left: 6px solid #2e7d32; }
+    .card-nok { border-left: 6px solid #c62828; }
+    .status-connected { color: green; font-weight: bold; }
+    .status-disconnected { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>🤖 Monitoramento em Tempo Real - Inspeção Cobot UR3e</h2>
+  
+  <div>
+    <label>URL da API:</label>
+    <input type="text" id="apiUrl" value="http://localhost:8000" style="width: 250px;">
+    
+    <label>Token JWT:</label>
+    <input type="text" id="token" placeholder="Cole seu token JWT aqui" style="width: 300px;">
+    
+    <button onclick="conectarSSE()">Conectar SSE</button>
+  </div>
+
+  <p>Status: <span id="statusSSE" class="status-disconnected">Desconectado</span></p>
+
+  <h3>📋 Feed de Inspeções Recebidas em Tempo Real</h3>
+  <div id="eventsLog"></div>
+
+  <script>
+    let evtSource = null;
+
+    function conectarSSE() {
+      const baseUrl = document.getElementById('apiUrl').value;
+      const token = document.getElementById('token').value;
+      const statusEl = document.getElementById('statusSSE');
+
+      if (evtSource) {
+        evtSource.close();
+      }
+
+      const streamUrl = `${baseUrl}/api/cobot/events/stream?access_token=${token}`;
+      evtSource = new EventSource(streamUrl);
+
+      evtSource.onopen = function() {
+        statusEl.textContent = "Conectado";
+        statusEl.className = "status-connected";
+      };
+
+      evtSource.addEventListener("inspection", function(e) {
+        const data = JSON.parse(e.data);
+        const log = document.getElementById('eventsLog');
+        
+        const card = document.createElement('div');
+        const isOk = data.resultado === 'INSPECTED_OK' || data.inspection_status === 'INSPECTED_OK';
+        card.className = `card ${isOk ? 'card-ok' : 'card-nok'}`;
+        
+        card.innerHTML = `
+          <strong>Peça:</strong> ${data.qrCode || data.piece_rfid_tag} <br>
+          <strong>Status:</strong> ${data.resultado || data.inspection_status} <br>
+          <strong>Ordem:</strong> ${data.order_id || 'OP-N/A'} <br>
+          <small>Recebido em: ${new Date().toLocaleTimeString()}</small>
+        `;
+        
+        log.prepend(card);
+      });
+
+      evtSource.onerror = function() {
+        statusEl.textContent = "Erro / Reconectando...";
+        statusEl.className = "status-disconnected";
+      };
+    }
+  </script>
+</body>
+</html>

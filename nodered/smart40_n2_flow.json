@@ -5,6 +5,9 @@
     "label": "SMART40 N2 - Cobot & Garra SCHUNK EGH80 (MQTT)",
     "disabled": false,
     "info": "Integracao completa: A) Chegada do pallet (CLP), B) Resultado da inspecao, C) Telemetria UR3e, D) Servidor da Garra SCHUNK EGH80 (recebe comandos da API e controla o hardware/simulador)."
+    "label": "SMART40 N2 - Cobot (MQTT)",
+    "disabled": false,
+    "info": "Chegada do pallet (CLP) -> CloudAMQP MQTT -> borda/RFID -> API -> resultado de volta via MQTT."
   },
   {
     "id": "n2_tls",
@@ -62,6 +65,8 @@
     "z": "n2_tab",
     "name": "A) CLP -> Node-RED -> CloudAMQP (smart40/n2/montagem/pallet)",
     "info": "1) Preencha host/usuário/senha nos nós de broker (duplo clique > lápis).\n2) Troque o tópico do nó 'mqtt in' do CLP pelo tópico real que o CLP publica.\n3) Use os injects de teste para simular sem o CLP.",
+
+    "info": "1) Preencha host/usuário/senha nos 2 nós de broker (duplo clique > lápis).\n2) Troque o tópico do nó 'mqtt in' do CLP pelo tópico real que o CLP publica.\n3) Use os injects de teste para simular sem o CLP.",
     "x": 300,
     "y": 40,
     "wires": []
@@ -238,6 +243,7 @@
     "z": "n2_tab",
     "name": "Normalizar sinal -> PALLET_ARRIVED",
     "func": "// Normaliza o sinal do CLP e dispara SOMENTE na borda de subida (pallet chegou).\nconst CFG = {\n    ORDER_ID: \"OP-2026-001\",\n    STATION: \"MONTAGEM\",\n    DEBOUNCE_MS: 5000,\n    TOPIC_OUT: \"smart40/n2/montagem/pallet\"\n};\n\nfunction toBool(v) {\n    if (typeof v === \"boolean\") return v;\n    if (typeof v === \"number\") return v !== 0;\n    if (typeof v === \"string\") {\n        const s = v.trim().toLowerCase();\n        if ([\"1\", \"true\", \"on\", \"high\"].includes(s)) return true;\n        if ([\"0\", \"false\", \"off\", \"low\"].includes(s)) return false;\n    }\n    return null;\n}\n\nlet p = msg.payload;\nif (Buffer.isBuffer(p)) p = p.toString();\nif (typeof p === \"string\") {\n    const s = p.trim();\n    try { p = JSON.parse(s); } catch (e) { p = s; }\n}\n\nlet presence = null, tag = null, simulate = false, order = null;\nif (p !== null && typeof p === \"object\") {\n    const v = (p.presence !== undefined) ? p.presence\n            : (p.pallet !== undefined) ? p.pallet\n            : (p.value !== undefined) ? p.value\n            : (p.state !== undefined) ? p.state\n            : p.sensor;\n    presence = toBool(v);\n    tag = p.tag_uid || null;\n    order = p.order_id || null;\n    simulate = p.simulate === true;\n} else {\n    presence = toBool(p);\n}\n\nif (presence === null) {\n    node.warn(\"Sinal do CLP não reconhecido: \" + JSON.stringify(msg.payload));\n    return null;\n}\n\nconst now = Date.now();\nconst prev = flow.get(\"pallet_presence\") === true;\nflow.set(\"pallet_presence\", presence);\n\nif (!presence) {\n    node.status({ fill: \"grey\", shape: \"ring\", text: \"pallet ausente\" });\n    return null;\n}\nif (prev && !simulate) {\n    node.status({ fill: \"grey\", shape: \"dot\", text: \"presença mantida (sem nova borda)\" });\n    return null;\n}\nconst last = flow.get(\"pallet_last_ts\") || 0;\nif (!simulate && (now - last) < CFG.DEBOUNCE_MS) {\n    node.warn(\"Debounce: nova chegada em \" + (now - last) + \" ms ignorada\");\n    return null;\n}\nflow.set(\"pallet_last_ts\", now);\n\nconst correlationId = \"PALLET-\" + now.toString(36) + \"-\" + Math.random().toString(36).slice(2, 8);\nconst out = {\n    event: \"PALLET_ARRIVED\",\n    station: CFG.STATION,\n    order_id: order || CFG.ORDER_ID,\n    correlation_id: correlationId,\n    ts: new Date(now).toISOString(),\n    source: msg.topic || \"nodered\"\n};\nif (tag) out.tag_uid = tag;\n\nnode.status({ fill: \"green\", shape: \"dot\", text: \"PALLET_ARRIVED \" + correlationId });\nreturn { topic: CFG.TOPIC_OUT, payload: out, qos: 1, retain: false };\n",
+    "func": "// Normaliza o sinal do CLP e dispara SOMENTE na borda de subida (pallet chegou).\n// Aceita: true/false, 1/0, \"1\"/\"0\", \"ON\"/\"OFF\", ou JSON {presence|pallet|value|state|sensor: ...}\n// Payload com \"simulate\": true ignora borda e debounce (usado pelos injects de teste).\nconst CFG = {\n    ORDER_ID: \"OP-2026-001\",\n    STATION: \"MONTAGEM\",\n    DEBOUNCE_MS: 5000,\n    TOPIC_OUT: \"smart40/n2/montagem/pallet\"\n};\n\nfunction toBool(v) {\n    if (typeof v === \"boolean\") return v;\n    if (typeof v === \"number\") return v !== 0;\n    if (typeof v === \"string\") {\n        const s = v.trim().toLowerCase();\n        if ([\"1\", \"true\", \"on\", \"high\"].includes(s)) return true;\n        if ([\"0\", \"false\", \"off\", \"low\"].includes(s)) return false;\n    }\n    return null;\n}\n\nlet p = msg.payload;\nif (Buffer.isBuffer(p)) p = p.toString();\nif (typeof p === \"string\") {\n    const s = p.trim();\n    try { p = JSON.parse(s); } catch (e) { p = s; }\n}\n\nlet presence = null, tag = null, simulate = false, order = null;\nif (p !== null && typeof p === \"object\") {\n    const v = (p.presence !== undefined) ? p.presence\n            : (p.pallet !== undefined) ? p.pallet\n            : (p.value !== undefined) ? p.value\n            : (p.state !== undefined) ? p.state\n            : p.sensor;\n    presence = toBool(v);\n    tag = p.tag_uid || null;\n    order = p.order_id || null;\n    simulate = p.simulate === true;\n} else {\n    presence = toBool(p);\n}\n\nif (presence === null) {\n    node.warn(\"Sinal do CLP não reconhecido: \" + JSON.stringify(msg.payload));\n    return null;\n}\n\nconst now = Date.now();\nconst prev = flow.get(\"pallet_presence\") === true;\nflow.set(\"pallet_presence\", presence);\n\nif (!presence) {\n    node.status({ fill: \"grey\", shape: \"ring\", text: \"pallet ausente\" });\n    return null;\n}\nif (prev && !simulate) {\n    node.status({ fill: \"grey\", shape: \"dot\", text: \"presença mantida (sem nova borda)\" });\n    return null;\n}\nconst last = flow.get(\"pallet_last_ts\") || 0;\nif (!simulate && (now - last) < CFG.DEBOUNCE_MS) {\n    node.warn(\"Debounce: nova chegada em \" + (now - last) + \" ms ignorada\");\n    return null;\n}\nflow.set(\"pallet_last_ts\", now);\n\nconst correlationId = \"PALLET-\" + now.toString(36) + \"-\" + Math.random().toString(36).slice(2, 8);\nconst out = {\n    event: \"PALLET_ARRIVED\",\n    station: CFG.STATION,\n    order_id: order || CFG.ORDER_ID,\n    correlation_id: correlationId,\n    ts: new Date(now).toISOString(),\n    source: msg.topic || \"nodered\"\n};\nif (tag) out.tag_uid = tag;\n\nnode.status({ fill: \"green\", shape: \"dot\", text: \"PALLET_ARRIVED \" + correlationId });\nreturn { topic: CFG.TOPIC_OUT, payload: out, qos: 1, retain: false };\n",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -471,5 +477,7 @@
     "x": 790,
     "y": 750,
     "wires": []
+  }
+]
   }
 ]

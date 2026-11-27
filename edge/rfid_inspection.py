@@ -125,6 +125,8 @@ def notify_cobot_service(
     status: str,
     details: Dict[str, Any],
     correlation_id: Optional[str] = None
+
+    details: Dict[str, Any]
 ) -> Optional[dict]:
     """Envia o resultado da inspeção RFID para a API do Cobot (pieces_traceability)."""
     payload = {

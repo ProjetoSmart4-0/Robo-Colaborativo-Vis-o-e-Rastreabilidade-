@@ -76,6 +76,9 @@ def write_ur_register_and_play(routine_id: int, piece_rfid_tag: str) -> bool:
         return False
 
 
+DRY_RUN = os.getenv("DRY_RUN", "true").lower() != "false"
+ROBOT_COMMANDS_ENABLED = os.getenv("ROBOT_COMMANDS_ENABLED", "false").lower() == "true"
+
 def trigger_robot_routine(routine_id: int, piece_rfid_tag: str):
     """Aciona a rotina no controlador do robô UR associando à TAG RFID da peça."""
     write_ur_register_and_play(routine_id=routine_id, piece_rfid_tag=piece_rfid_tag)

@@ -1,3 +1,4 @@
+
 # 🤖 Planta N2 (SMART 4.0) — Automação Robótica, Gêmeo Digital SCHUNK EGH80, Visão/RFID e Rastreabilidade (Grupo 2)
 
 Repositório oficial do **Grupo 2** para a Estação **SMART 4.0 (Planta N2)**. Integra o chão de fábrica (robô colaborativo **Universal Robots UR3e**, garra elétrica inteligente **SCHUNK EGH80** via IO-Link/FEN20 e leitura RFID/Visão) a uma arquitetura serverless em nuvem (**Render**, **CloudAMQP / RabbitMQ**, **Neon Postgres** e **Vercel**).
@@ -161,3 +162,10 @@ curl -X POST "$API_URL/api/v1/cobot/inspection" \
    - `DATABASE_URL`: string de conexão PostgreSQL do **Neon** (`postgresql://user:pass@ep-...neon.tech/neondb?sslmode=require`).
    - `RABBITMQ_URL`: URL `amqps://...` da instância **CloudAMQP**.
    - `CORS_ORIGINS`: `*` (ou o domínio da aplicação do Grupo 4 na Vercel).
+
+## 🤖 Microsserviço `cobot-service` (Sprint 3)
+* **Endpoints**: Suporte a rotinas de montagem/descarte, consulta de status e histórico de inspeções RFID [7].
+* **Real-time SSE**: Transmissão nativa em tempo real para a IHM Web via `GET /api/cobot/events/stream` [9, 12].
+* **Persistência e Idempotência**: Gravação garantida via `storage.py` (SQLite / Neon Postgres) [8].
+* **Testes Automatizados**: Suíte PyTest em `tests/test_api.py` validando autenticação, RBAC e payloads [3].
+

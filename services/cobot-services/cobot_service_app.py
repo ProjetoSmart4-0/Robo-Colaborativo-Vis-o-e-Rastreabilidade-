@@ -19,6 +19,17 @@ Funcionalidades da Sprint 3:
      - Persistência idempotente em pieces_traceability (Neon Postgres / SQLite)
      - Despacho AMQP (cobot_pick_place_queue) e publicação MQTT (amq.topic)
      - Compatibilidade total com proxy Vercel (/api/cobot/* e /api/v1/cobot/*) e CORS
+
+cobot_service_app.py - Microsserviço do Robô Colaborativo (UR3e) - Grupo 2, SMART 4.0
+Versão unificada: base v2 (RFID + banco + SSE) + CORS/RABBITMQ_URL/PORT (Render)
++ publicação de eventos em MQTT (via exchange amq.topic do RabbitMQ/CloudAMQP).
+
+Fluxos de saída de uma inspeção (POST /api/v1/cobot/inspection):
+  1. Banco (storage.py)                  -> rastreabilidade idempotente
+  2. SSE  (GET /api/cobot/events/stream) -> IHM web em tempo real
+  3. MQTT (amq.topic, smart40.n2.cobot.inspection -> tópico smart40/n2/cobot/inspection)
+  4. Fila AMQP cobot_pick_place_queue    -> worker aciona o UR3e (rotina 9 ou 8)
+Se o broker estiver fora, 1 e 2 continuam funcionando (resposta traz queued=false).
 """
 
 import os
@@ -36,6 +47,7 @@ from typing import Dict, Any, Optional, Literal, List, Tuple
 import pika
 import jwt
 from fastapi import FastAPI, HTTPException, Depends, Security, Query, status
+from fastapi import FastAPI, HTTPException, Depends, Security, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -100,6 +112,9 @@ app.add_middleware(
 # ----------------------------------------------------------------------------
 bearer = HTTPBearer(auto_error=False)
 
+# O plugin MQTT do RabbitMQ liga o exchange amq.topic aos tópicos MQTT (ponto <-> barra).
+MQTT_EXCHANGE = "amq.topic"
+MQTT_ROUTING_KEY_INSPECTION = os.getenv("MQTT_ROUTING_KEY_INSPECTION", "smart40.n2.cobot.inspection")
 
 def _decode_token(token: str, allowed_roles: set) -> dict:
     try:
