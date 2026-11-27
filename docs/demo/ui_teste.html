@@ -2,6 +2,214 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <title>IHM Gêmeo Digital - Cobot UR3e & Garra SCHUNK EGH80</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background-color: #0f172a; color: #f8fafc; }
+    h2, h3 { color: #38bdf8; margin-bottom: 10px; }
+    .toolbar { background: #1e293b; padding: 14px; border-radius: 8px; margin-bottom: 18px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    input, select, button { padding: 8px 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #f8fafc; }
+    button { background: #0284c7; border: none; cursor: pointer; font-weight: 600; }
+    button:hover { background: #0369a1; }
+    .btn-green { background: #16a34a; }
+    .btn-blue { background: #2563eb; }
+    .btn-amber { background: #d97706; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+    .panel { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; }
+    .led-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: bold; font-size: 0.85rem; }
+    .led-GREEN { background: #166534; color: #4ade80; }
+    .led-RED { background: #991b1b; color: #fca5a5; }
+    .led-BLUE { background: #1e40af; color: #93c5fd; }
+    .led-YELLOW { background: #854d0e; color: #fde047; }
+    .bar-bg { background: #0f172a; height: 14px; border-radius: 7px; overflow: hidden; margin: 6px 0 12px; border: 1px solid #334155; }
+    .bar-fill { background: #38bdf8; height: 100%; transition: width 0.25s ease; }
+    .card { border: 1px solid #334155; padding: 10px; margin-bottom: 8px; border-radius: 6px; background: #0f172a; font-size: 0.9rem; }
+    .card-ok { border-left: 5px solid #22c55e; }
+    .card-nok { border-left: 5px solid #ef4444; }
+    .status-connected { color: #4ade80; font-weight: bold; }
+    .status-disconnected { color: #f87171; font-weight: bold; }
+    .joints-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .joint-box { background: #0f172a; padding: 8px; border-radius: 6px; text-align: center; border: 1px solid #334155; }
+  </style>
+</head>
+<body>
+  <h2>🤖 Gêmeo Digital SMART 4.0 — Robô UR3e & Garra SCHUNK EGH80</h2>
+
+  <div class="toolbar">
+    <label>URL da API:</label>
+    <input type="text" id="apiUrl" value="http://localhost:8080" style="width: 230px;">
+
+    <label>Token JWT (ENGINEER):</label>
+    <input type="text" id="token" placeholder="Cole seu token JWT aqui" style="width: 280px;">
+
+    <button onclick="conectarStreams()">🔌 Conectar SSE (Telemetria + Eventos)</button>
+    <span>Status: <span id="statusSSE" class="status-disconnected">Desconectado</span></span>
+  </div>
+
+  <div class="grid">
+    <!-- Painel do Gêmeo Digital da Garra SCHUNK EGH80 -->
+    <div class="panel">
+      <h3>🦾 Gêmeo Digital — Garra SCHUNK EGH80</h3>
+      <p><strong>Estado:</strong> <span id="gState">HOLDING</span> | <strong>LED:</strong> <span id="gLed" class="led-badge led-GREEN">GREEN</span></p>
+      <p><strong>Último Comando:</strong> <span id="gCmd">EGH Grip</span> | <strong>Peça Detectada:</strong> <span id="gPiece">Sim</span></p>
+
+      <div>
+        <small>Abertura dos Dedos: <span id="gPosMm">18.5</span> mm (<span id="gOpenPct">23.1</span>%)</small>
+        <div class="bar-bg"><div id="barOpening" class="bar-fill" style="width: 23.1%;"></div></div>
+      </div>
+
+      <div>
+        <small>Força de Preensão: <span id="gForce">50</span>%</small>
+        <div class="bar-bg"><div id="barForce" class="bar-fill" style="width: 50%; background: #22c55e;"></div></div>
+      </div>
+
+      <h4>🎮 Comandos Diretos da Garra</h4>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button class="btn-green" onclick="enviarComandoGarra('EGH Grip', null, 80)">EGH Grip (Fechar)</button>
+        <button class="btn-blue" onclick="enviarComandoGarra('EGH Release', 80, 20)">EGH Release (Abrir)</button>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="number" id="posMmInput" value="40" min="0" max="80" step="1" style="width:70px;">
+        <span>mm</span>
+        <button class="btn-amber" onclick="enviarPosicaoGarra()">EGH Position</button>
+      </div>
+    </div>
+
+    <!-- Painel Cinemático UR3e -->
+    <div class="panel">
+      <h3>📐 Telemetria Cinemática — UR3e (125 Hz -> SSE)</h3>
+      <p><strong>Fonte:</strong> <span id="tSource">SIMULATED</span> | <strong>Register 1:</strong> <span id="tReg1">9</span></p>
+      <p><strong>Velocidade TCP:</strong> <span id="tSpeed">0.150</span> m/s</p>
+      <div class="joints-grid" id="jointsContainer">
+        <div class="joint-box">J1 (Base)<br><strong id="j0">0.0°</strong></div>
+        <div class="joint-box">J2 (Ombro)<br><strong id="j1">-90.0°</strong></div>
+        <div class="joint-box">J3 (Cotovelo)<br><strong id="j2">0.0°</strong></div>
+        <div class="joint-box">J4 (Punho 1)<br><strong id="j3">-90.0°</strong></div>
+        <div class="joint-box">J5 (Punho 2)<br><strong id="j4">0.0°</strong></div>
+        <div class="joint-box">J6 (Punho 3)<br><strong id="j5">0.0°</strong></div>
+      </div>
+    </div>
+
+    <!-- Feed de Inspeções e Eventos -->
+    <div class="panel">
+      <h3>📋 Rastreabilidade & Eventos em Tempo Real</h3>
+      <div id="eventsLog" style="max-height: 320px; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <script>
+    let evtEvents = null;
+    let evtTelemetry = null;
+
+    function atualizarPainelTelemetria(data) {
+      if (!data) return;
+      document.getElementById('tSource').textContent = data.telemetry_source || 'SIMULATED';
+      document.getElementById('tReg1').textContent = data.register_1 ?? 9;
+      document.getElementById('tSpeed').textContent = (data.tcp_speed_m_s ?? 0.15).toFixed(3);
+
+      if (Array.isArray(data.joints_position_deg)) {
+        data.joints_position_deg.forEach((val, idx) => {
+          const el = document.getElementById('j' + idx);
+          if (el) el.textContent = val.toFixed(1) + '°';
+        });
+      }
+
+      const g = data.gripper;
+      if (g) {
+        document.getElementById('gState').textContent = g.state;
+        const ledEl = document.getElementById('gLed');
+        ledEl.textContent = g.led_color;
+        ledEl.className = 'led-badge led-' + g.led_color;
+        document.getElementById('gCmd').textContent = g.last_command || 'EGH Grip';
+        document.getElementById('gPiece').textContent = g.piece_detected ? 'Sim' : 'Não';
+        document.getElementById('gPosMm').textContent = g.position_mm;
+        document.getElementById('gOpenPct').textContent = g.opening_percentage;
+        document.getElementById('gForce').textContent = g.force_percentage;
+        document.getElementById('barOpening').style.width = g.opening_percentage + '%';
+        document.getElementById('barForce').style.width = g.force_percentage + '%';
+      }
+    }
+
+    function conectarStreams() {
+      const baseUrl = document.getElementById('apiUrl').value.replace(/\/$/, '');
+      const token = document.getElementById('token').value.trim();
+      const statusEl = document.getElementById('statusSSE');
+
+      if (evtEvents) evtEvents.close();
+      if (evtTelemetry) evtTelemetry.close();
+
+      const qToken = token ? `?access_token=${encodeURIComponent(token)}` : '';
+      evtTelemetry = new EventSource(`${baseUrl}/api/v1/cobot/telemetry/stream${qToken}`);
+      evtEvents = new EventSource(`${baseUrl}/api/cobot/events/stream${qToken}`);
+
+      evtTelemetry.onopen = function() {
+        statusEl.textContent = "Conectado (SSE Ativo)";
+        statusEl.className = "status-connected";
+      };
+
+      evtTelemetry.addEventListener("telemetry", function(e) {
+        atualizarPainelTelemetria(JSON.parse(e.data));
+      });
+
+      evtEvents.addEventListener("inspection", function(e) {
+        const data = JSON.parse(e.data);
+        const log = document.getElementById('eventsLog');
+        const card = document.createElement('div');
+        const isOk = data.resultado === 'INSPECTED_OK' || data.inspection_status === 'INSPECTED_OK';
+        card.className = `card ${isOk ? 'card-ok' : 'card-nok'}`;
+        card.innerHTML = `
+          <strong>Peça:</strong> ${data.qrCode || data.piece_rfid_tag} <br>
+          <strong>Status:</strong> ${data.resultado || data.inspection_status} <br>
+          <strong>Garra:</strong> ${data.gripper_action || data.acao || 'N/A'} <br>
+          <small>${new Date().toLocaleTimeString()}</small>
+        `;
+        log.prepend(card);
+      });
+
+      evtEvents.addEventListener("gripper", function(e) {
+        const data = JSON.parse(e.data);
+        if (data.gripper) atualizarPainelTelemetria({ gripper: data.gripper, telemetry_source: 'DIGITAL_TWIN_CMD' });
+        const log = document.getElementById('eventsLog');
+        const card = document.createElement('div');
+        card.className = 'card card-ok';
+        card.innerHTML = `
+          <strong>Comando Garra:</strong> ${data.command} <br>
+          <strong>Estado:</strong> ${data.gripper.state} (${data.gripper.position_mm} mm | ${data.gripper.force_percentage}%) <br>
+          <small>${new Date().toLocaleTimeString()}</small>
+        `;
+        log.prepend(card);
+      });
+
+      evtTelemetry.onerror = function() {
+        statusEl.textContent = "Reconectando...";
+        statusEl.className = "status-disconnected";
+      };
+    }
+
+    async function enviarComandoGarra(command, position_mm, force_percentage) {
+      const baseUrl = document.getElementById('apiUrl').value.replace(/\/$/, '');
+      const token = document.getElementById('token').value.trim();
+      const body = { command, force_percentage };
+      if (position_mm !== null) body.position_mm = position_mm;
+      const resp = await fetch(`${baseUrl}/api/v1/cobot/gripper/command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+      const json = await resp.json();
+      if (json.gripper) atualizarPainelTelemetria(json);
+    }
+
+    function enviarPosicaoGarra() {
+      const mm = parseFloat(document.getElementById('posMmInput').value || '40');
+      enviarComandoGarra('EGH Position', mm, 60);
+    }
+  </script>
+</body>
+</html>
+
   <title>IHM Teste - Eventos Cobot SSE</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
